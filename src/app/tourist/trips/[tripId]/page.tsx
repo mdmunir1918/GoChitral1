@@ -20,6 +20,7 @@ import { AddListingForm } from "@/features/trips/components/add-listing-form";
 import { StatusMessage } from "@/features/tourist/components/tourist-workspace";
 import { requireAccountType } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { ListingMap, type MapPoint } from "@/features/maps/components/listing-map";
 
 export const instant = false;
 const dayMs = 24 * 60 * 60 * 1000;
@@ -70,6 +71,7 @@ export default async function TouristTripDetailPage({ params, searchParams }: { 
 
   const dateCompleted = dateInput(trip.endDate) < localToday();
   const archived = Boolean(trip.archivedAt) || dateCompleted;
+  const itineraryMapPoints: MapPoint[] = trip.days.flatMap((day) => day.items.filter((item) => item.latitude !== null && item.longitude !== null).map((item) => ({ id: item.id, title: item.title, location: item.location ?? "Planned stop", latitude: item.latitude!, longitude: item.longitude! })));
   const configuredAppUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? process.env.AUTH_URL;
   const appUrl = configuredAppUrl?.startsWith("https://") ? new URL(configuredAppUrl).origin : "https://gochitral.vercel.app";
   const itineraryText = [
@@ -122,6 +124,8 @@ export default async function TouristTripDetailPage({ params, searchParams }: { 
         {trip.days.map((day) => <a key={day.id} href={`#${day.id}`} className="inline-flex h-10 shrink-0 items-center rounded-full border border-border bg-white px-4 text-sm font-medium transition hover:border-primary hover:text-primary">Day {day.dayNumber}</a>)}
         {!archived && trip.days.length < 30 && <form action={addTripDay} className="w-full sm:ml-auto sm:w-auto"><input type="hidden" name="tripId" value={trip.id} /><button className="inline-flex h-10 w-full items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary/90 sm:w-auto">+ Add a day</button></form>}
       </nav>
+
+      {itineraryMapPoints.length > 0 && <ListingMap points={itineraryMapPoints} label="Map of itinerary stops with saved coordinates" />}
 
       <section id="accommodation" className="scroll-mt-6 rounded-3xl border border-border bg-white p-5 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">

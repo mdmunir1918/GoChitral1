@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/page-states";
 import { PlaceCard } from "@/features/directory/components/listing-cards";
 import { placeCategoryLabels } from "@/features/directory/data";
 import { PlaceCategory } from "@prisma/client";
+import { ListingMap, type MapPoint } from "@/features/maps/components/listing-map";
 
 export const instant = false;
 const pageSize = 12;
@@ -33,6 +34,7 @@ export default async function PlacesDirectoryPage({ searchParams }: { searchPara
     prisma.place.count({ where }),
   ]);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const mapPoints: MapPoint[] = places.filter((place) => place.latitude !== null && place.longitude !== null).map((place) => ({ id: place.id, title: place.name, location: place.location, href: `/places/${place.slug}`, latitude: place.latitude!, longitude: place.longitude! }));
   const search = new URLSearchParams();
   if (query) search.set("q", query);
   if (location) search.set("location", location);
@@ -48,6 +50,7 @@ export default async function PlacesDirectoryPage({ searchParams }: { searchPara
       <button className="h-11 rounded-full bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90">Filter</button>
     </form>
     <p className="mt-6 text-sm text-muted">{total} approved {total === 1 ? "place" : "places"}</p>
+    {mapPoints.length > 0 && <div className="mt-4"><ListingMap points={mapPoints} label="Map of places with saved coordinates" /></div>}
     {places.length ? <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{places.map((place) => <PlaceCard key={place.id} place={place} />)}</div> : <EmptyState className="mt-4" title="No approved places match yet" description="Try another search or category. New directory entries appear here after review." />}
     {pageCount > 1 && <nav aria-label="Directory pages" className="mt-8 flex justify-center gap-3 text-sm">{page > 1 && <Link className="rounded-full border border-border px-4 py-2" href={`/places?${search}&page=${page - 1}`}>Previous</Link>}<span className="px-3 py-2 text-muted">Page {page} of {pageCount}</span>{page < pageCount && <Link className="rounded-full border border-border px-4 py-2" href={`/places?${search}&page=${page + 1}`}>Next</Link>}</nav>}
   </PageContainer></main>;

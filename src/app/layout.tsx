@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader, SiteHeaderFallback } from "@/components/site/site-header";
 import { AppFeedbackToast } from "@/components/site/app-feedback-toast";
+import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

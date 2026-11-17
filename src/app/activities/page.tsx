@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/page-states";
 import { ActivityCard } from "@/features/directory/components/listing-cards";
 import { activityCategoryLabels } from "@/features/directory/data";
 import { ActivityCategory } from "@prisma/client";
+import { ListingMap, type MapPoint } from "@/features/maps/components/listing-map";
 
 export const instant = false;
 const pageSize = 12;
@@ -31,6 +32,7 @@ export default async function ActivitiesDirectoryPage({ searchParams }: { search
     prisma.activity.count({ where }),
   ]);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const mapPoints: MapPoint[] = activities.filter((activity) => activity.latitude !== null && activity.longitude !== null).map((activity) => ({ id: activity.id, title: activity.name, location: activity.location, href: `/activities/${activity.slug}`, latitude: activity.latitude!, longitude: activity.longitude! }));
   const search = new URLSearchParams();
   if (query) search.set("q", query);
   if (location) search.set("location", location);
@@ -45,6 +47,7 @@ export default async function ActivitiesDirectoryPage({ searchParams }: { search
       <button className="h-11 rounded-full bg-primary px-5 text-sm font-semibold text-white hover:bg-primary/90">Filter</button>
     </form>
     <p className="mt-6 text-sm text-muted">{total} approved {total === 1 ? "activity" : "activities"}</p>
+    {mapPoints.length > 0 && <div className="mt-4"><ListingMap points={mapPoints} label="Map of activities with saved coordinates" /></div>}
     {activities.length ? <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{activities.map((activity) => <ActivityCard key={activity.id} activity={activity} />)}</div> : <EmptyState className="mt-4" title="No approved activities yet" description="Approved guide submissions will appear here after admin review." />}
     {pageCount > 1 && <nav aria-label="Activity pages" className="mt-8 flex justify-center gap-3 text-sm">{page > 1 && <Link className="rounded-full border border-border px-4 py-2" href={`/activities?${search}&page=${page - 1}`}>Previous</Link>}<span className="px-3 py-2 text-muted">Page {page} of {pageCount}</span>{page < pageCount && <Link className="rounded-full border border-border px-4 py-2" href={`/activities?${search}&page=${page + 1}`}>Next</Link>}</nav>}
   </PageContainer></main>;

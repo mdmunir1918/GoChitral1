@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { placeCategoryLabels } from "@/features/directory/data";
 import { SaveListingButton } from "@/features/tourist/components/save-listing-button";
 import { AddToTripButton } from "@/features/trips/components/add-to-trip-button";
+import { ListingMap } from "@/features/maps/components/listing-map";
 
 export const instant = false;
 
@@ -41,6 +42,7 @@ export default async function PlaceDetailsPage({ params }: { params: Promise<{ s
         </PageContainer>
       </div>
       {directoryPlace.images.length > 1 && <PageContainer className="grid grid-cols-2 gap-3 pt-5 sm:grid-cols-3">{directoryPlace.images.slice(1, 4).map((image) => <div key={image.id} className="relative h-36 overflow-hidden rounded-xl bg-background"><Image src={image.url} alt={image.altText} fill unoptimized sizes="33vw" className="object-cover" /></div>)}</PageContainer>}
+      {directoryPlace.latitude !== null && directoryPlace.longitude !== null && <PageContainer className="pt-8"><ListingMap points={[{ id: directoryPlace.id, title: directoryPlace.name, location: directoryPlace.location, latitude: directoryPlace.latitude, longitude: directoryPlace.longitude }]} label={`Map location for ${directoryPlace.name}`} /></PageContainer>}
       <PageContainer className="grid gap-10 py-10 lg:grid-cols-[1fr_330px] lg:py-14">
         <article className="max-w-3xl">
           <div className="flex items-center gap-2 text-sm text-muted"><MapPin size={16} className="text-primary" aria-hidden="true" /> {directoryPlace.location}</div>
