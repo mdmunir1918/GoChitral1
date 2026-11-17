@@ -33,4 +33,3 @@ Demo records are fictional and must not be added to the public production databa
 - `npm run build`
 
 Never commit `.env`, `.env.local`, or credentials.
-
