@@ -43,6 +43,9 @@ export function StatusMessage({ status }: { status?: string }) {
     "item-added": "The item was added to your itinerary.",
     "stay-added": "The accommodation was added to your trip.",
     "day-added": "A new day was added to your trip.",
+    "day-removed": "The day was removed. Later days and their itinerary entries moved up one day.",
+    "day-has-stay": "This day overlaps a hotel stay. Adjust or remove that stay before removing the day.",
+    "last-day": "A trip needs at least one day. You can remove the trip from your trip list if you no longer need it.",
     reordered: "Your itinerary order was updated.",
     "too-long": "Trips can be up to 30 days long. Create a shorter trip to continue.",
     "day-limit": "A trip can have up to 30 days.",
@@ -50,5 +53,5 @@ export function StatusMessage({ status }: { status?: string }) {
   };
   const message = status ? messages[status] : undefined;
   if (!message) return null;
-  return <StatusToast key={status} message={message} success={Boolean(status && ["saved", "removed", "deleted", "created", "updated", "archived", "restored", "added", "item-added", "stay-added", "day-added", "reordered", "trip-completed"].includes(status))} />;
+  return <StatusToast key={status} message={message} success={Boolean(status && ["saved", "removed", "deleted", "created", "updated", "archived", "restored", "added", "item-added", "stay-added", "day-added", "day-removed", "reordered", "trip-completed"].includes(status))} />;
 }

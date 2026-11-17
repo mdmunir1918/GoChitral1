@@ -143,6 +143,53 @@ export async function addTripDay(formData: FormData) {
   redirect(`/tourist/trips/${tripId}?status=day-added#${newDay.id}`);
 }
 
+export async function removeTripDay(formData: FormData) {
+  const user = await requireAccountType(["TOURIST"]);
+  const tripId = formText(formData, "tripId");
+  const dayId = formText(formData, "dayId");
+  if (!tripIdText.safeParse(tripId).success || !dayId) redirect("/tourist/trips?status=invalid");
+
+  const trip = await prisma.trip.findFirst({
+    where: { id: tripId, userId: user.id, archivedAt: null, endDate: { gte: tripDateToday() } },
+    include: {
+      days: { orderBy: { dayNumber: "asc" } },
+      accommodations: { select: { id: true, checkIn: true, checkOut: true } },
+    },
+  });
+  if (!trip) redirect("/tourist/trips?status=unavailable");
+  if (trip.days.length <= 1) redirect(`/tourist/trips/${tripId}?status=last-day`);
+
+  const index = trip.days.findIndex((day) => day.id === dayId);
+  if (index < 0) redirect(`/tourist/trips/${tripId}?status=unavailable`);
+  const removedDay = trip.days[index];
+  const overlapsStay = trip.accommodations.some((stay) => stay.checkIn <= removedDay.date && stay.checkOut >= removedDay.date);
+  if (overlapsStay) redirect(`/tourist/trips/${tripId}?status=day-has-stay`);
+
+  const shiftDate = (date: Date) => new Date(date.getTime() - dayMs);
+  try {
+    await prisma.$transaction(async (transaction) => {
+      // Removing the day cascades its itinerary items. The confirmation in the UI warns before this happens.
+      await transaction.tripDay.delete({ where: { id: removedDay.id } });
+
+      // Deleting first frees the unique day number and date. Updating in order frees the next pair each time.
+      for (const day of trip.days.slice(index + 1)) {
+        await transaction.tripDay.update({ where: { id: day.id }, data: { dayNumber: day.dayNumber - 1, date: shiftDate(day.date) } });
+      }
+
+      for (const stay of trip.accommodations.filter((accommodation) => accommodation.checkIn > removedDay.date)) {
+        await transaction.tripAccommodation.update({ where: { id: stay.id }, data: { checkIn: shiftDate(stay.checkIn), checkOut: shiftDate(stay.checkOut) } });
+      }
+
+      await transaction.trip.update({ where: { id: trip.id }, data: { endDate: shiftDate(trip.endDate) } });
+    });
+  } catch {
+    redirect(`/tourist/trips/${tripId}?status=error`);
+  }
+
+  refreshTripPages(tripId);
+  redirect(`/tourist/trips/${tripId}?status=day-removed`);
+}
+
 export async function updateTripDayNotes(formData: FormData) {
   const user = await requireAccountType(["TOURIST"]);
   const tripId = formText(formData, "tripId");
@@ -175,9 +222,18 @@ type PublicListingSnapshot = {
   priceInformation: string | null;
 };
 
-async function getPublicListing(type: string, id: string): Promise<PublicListingSnapshot | null> {
+async function getPublicListing(type: string, id: string, placeKind?: string): Promise<PublicListingSnapshot | null> {
   if (type === "PLACE") {
-    const place = await prisma.place.findFirst({ where: { id, status: "APPROVED" }, select: { id: true, name: true, location: true, latitude: true, longitude: true, priceRange: true } });
+    if (placeKind && !["PLACE", "RESTAURANT"].includes(placeKind)) return null;
+    const place = await prisma.place.findFirst({
+      where: {
+        id,
+        status: "APPROVED",
+        ...(placeKind === "RESTAURANT" ? { category: { in: ["RESTAURANT", "FOOD_SPOT"] } } : {}),
+        ...(placeKind === "PLACE" ? { category: { notIn: ["RESTAURANT", "FOOD_SPOT"] } } : {}),
+      },
+      select: { id: true, name: true, location: true, latitude: true, longitude: true, priceRange: true },
+    });
     return place ? { type: "PLACE", id: place.id, title: place.name, location: place.location, latitude: place.latitude, longitude: place.longitude, priceInformation: place.priceRange } : null;
   }
   if (type === "ACTIVITY") {
@@ -202,6 +258,7 @@ export async function addListingToTrip(formData: FormData) {
   const [tripId, dayId] = selection.split("|");
   const listingValue = formText(formData, "listing");
   const [listingType, listingId] = listingValue ? listingValue.split("|") : [formText(formData, "type"), formText(formData, "listingId")];
+  const placeKind = formText(formData, "placeKind");
   const type = listingType;
   if (type !== "CUSTOM" && (!listingId || !["PLACE", "ACTIVITY", "HOTEL", "GUIDE"].includes(type))) {
     redirect(`/tourist/trips/${encodeURIComponent(tripId)}?status=invalid`);
@@ -231,7 +288,7 @@ export async function addListingToTrip(formData: FormData) {
       redirect(`/tourist/trips/${tripId}?status=error`);
     }
   } else {
-    const listing = await getPublicListing(type, listingId);
+    const listing = await getPublicListing(type, listingId, type === "PLACE" ? placeKind || undefined : undefined);
     if (!listing) redirect(`/tourist/trips/${tripId}?status=unavailable`);
     common = { ...common, title: listing.title, location: listing.location, latitude: listing.latitude, longitude: listing.longitude, priceInformation: listing.priceInformation };
     const relations = listing.type === "PLACE" ? { placeId: listing.id } : listing.type === "ACTIVITY" ? { activityId: listing.id } : listing.type === "HOTEL" ? { hotelId: listing.id } : { guideProfileId: listing.id };
