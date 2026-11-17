@@ -172,9 +172,9 @@ export default async function TouristTripDetailPage({ params, searchParams }: { 
               <div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">Day {day.dayNumber}</p><h4 className="mt-1 text-xl font-semibold">{dateLabel(day.date)}</h4></div>
               <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-muted">{day.items.length} {day.items.length === 1 ? "stop" : "stops"}</span>
-                {!archived && trip.days.length > 1 && <details className="group relative">
+                {!archived && trip.days.length > 1 && <details className="group w-full sm:w-auto">
                   <summary className="inline-flex h-9 cursor-pointer list-none items-center rounded-full border border-border bg-white px-3 text-sm font-medium text-muted hover:border-rose-300 hover:text-rose-700 marker:hidden">Remove day</summary>
-                  <div className="absolute right-0 z-10 mt-2 w-[min(20rem,calc(100vw-3rem))] rounded-2xl border border-rose-200 bg-white p-4 shadow-lg">
+                  <div className="mt-2 w-full rounded-2xl border border-rose-200 bg-white p-4 sm:w-80">
                     <p className="text-sm font-semibold text-foreground">Remove Day {day.dayNumber}?</p>
                     <p className="mt-2 text-xs leading-5 text-muted">Stops on this day will be deleted. Later days and hotel stays will move earlier by one day. This cannot be undone.</p>
                     <form action={removeTripDay} className="mt-4 flex justify-end"><input type="hidden" name="tripId" value={trip.id} /><input type="hidden" name="dayId" value={day.id} /><button className="inline-flex h-9 items-center rounded-full bg-rose-700 px-3 text-sm font-semibold text-white hover:bg-rose-800">Confirm remove</button></form>
